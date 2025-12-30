@@ -6,6 +6,8 @@ code completions by comparing them to canonical solutions.
 """
 
 from typing import List, Dict, Any, Optional, Tuple
+from rouge_score import rouge_scorer
+import numpy as np
 
 
 class UtilityEvaluator:
@@ -28,12 +30,11 @@ class UtilityEvaluator:
 
         Args:
             rouge_types: ROUGE metric types (default: ["rouge1", "rouge2", "rougeL"]).
-
-        # TODO: [PLACEHOLDER] Initialize ROUGE scorer
-        # - Import rouge_score library
-        # - Configure ROUGE types
         """
-        pass
+        if rouge_types is None:
+            rouge_types = ["rouge1", "rouge2", "rougeL"]
+        self.rouge_types = rouge_types
+        self._scorer = rouge_scorer.RougeScorer(rouge_types, use_stemmer=True)
 
     def compute_rouge_score(
         self,
@@ -49,12 +50,12 @@ class UtilityEvaluator:
 
         Returns:
             Dictionary of ROUGE scores.
-
-        # TODO: [PLACEHOLDER] Implement ROUGE score computation
-        # - Compute ROUGE-1, ROUGE-2, ROUGE-L
-        # - Return F1 scores for each metric
         """
-        pass
+        if not generated or not reference:
+            return {rt: 0.0 for rt in self.rouge_types}
+        
+        scores = self._scorer.score(reference, generated)
+        return {rt: scores[rt].fmeasure for rt in self.rouge_types}
 
     def compute_rouge_batch(
         self,
@@ -70,10 +71,11 @@ class UtilityEvaluator:
 
         Returns:
             List of ROUGE score dictionaries.
-
-        # TODO: [PLACEHOLDER] Implement batch ROUGE computation
         """
-        pass
+        results = []
+        for gen, ref in zip(generated_list, reference_list):
+            results.append(self.compute_rouge_score(gen, ref))
+        return results
 
     def get_utility_score(
         self,
@@ -91,10 +93,9 @@ class UtilityEvaluator:
 
         Returns:
             Utility score between 0 and 1.
-
-        # TODO: [PLACEHOLDER] Implement single utility score
         """
-        pass
+        scores = self.compute_rouge_score(generated, reference)
+        return scores.get(metric, 0.0)
 
     def compute_exact_match(
         self,
@@ -110,10 +111,10 @@ class UtilityEvaluator:
 
         Returns:
             True if exact match, False otherwise.
-
-        # TODO: [PLACEHOLDER] Implement exact match comparison
         """
-        pass
+        gen_normalized = ' '.join(generated.split())
+        ref_normalized = ' '.join(reference.split())
+        return gen_normalized == ref_normalized
 
     def compute_bleu_score(
         self,
@@ -129,10 +130,25 @@ class UtilityEvaluator:
 
         Returns:
             BLEU score between 0 and 1.
-
-        # TODO: [PLACEHOLDER] Implement BLEU score computation
         """
-        pass
+        from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+        
+        if not generated or not reference:
+            return 0.0
+        
+        reference_tokens = reference.split()
+        generated_tokens = generated.split()
+        
+        if not reference_tokens or not generated_tokens:
+            return 0.0
+        
+        smoothing = SmoothingFunction().method1
+        try:
+            score = sentence_bleu([reference_tokens], generated_tokens, smoothing_function=smoothing)
+        except:
+            score = 0.0
+        
+        return score
 
     def aggregate_scores(
         self,
@@ -146,11 +162,24 @@ class UtilityEvaluator:
 
         Returns:
             Aggregated statistics (mean, std, min, max).
-
-        # TODO: [PLACEHOLDER] Implement score aggregation
         """
-        pass
+        if not scores:
+            return {}
+        
+        aggregated = {}
+        all_keys = set()
+        for s in scores:
+            all_keys.update(s.keys())
+        
+        for key in all_keys:
+            values = [s.get(key, 0.0) for s in scores]
+            aggregated[f"{key}_mean"] = float(np.mean(values))
+            aggregated[f"{key}_std"] = float(np.std(values))
+            aggregated[f"{key}_min"] = float(np.min(values))
+            aggregated[f"{key}_max"] = float(np.max(values))
+        
+        return aggregated
 
     def __repr__(self) -> str:
         """Return string representation of the evaluator."""
-        pass
+        return f"UtilityEvaluator(rouge_types={self.rouge_types})"

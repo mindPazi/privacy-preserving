@@ -6,6 +6,8 @@ of obfuscated prompts by measuring their distance from original prompts.
 """
 
 from typing import List, Dict, Any, Optional, Tuple
+import Levenshtein
+import numpy as np
 
 
 class PrivacyEvaluator:
@@ -28,10 +30,8 @@ class PrivacyEvaluator:
 
         Args:
             normalization: How to normalize distances ("max_length", "mean_length", "none").
-
-        # TODO: [PLACEHOLDER] Initialize evaluator settings
         """
-        pass
+        self.normalization = normalization
 
     def compute_levenshtein_distance(
         self,
@@ -47,11 +47,8 @@ class PrivacyEvaluator:
 
         Returns:
             The Levenshtein distance (number of edits).
-
-        # TODO: [PLACEHOLDER] Implement Levenshtein distance
-        # - Can use python-Levenshtein or implement manually
         """
-        pass
+        return Levenshtein.distance(original, obfuscated)
 
     def compute_normalized_distance(
         self,
@@ -67,11 +64,24 @@ class PrivacyEvaluator:
 
         Returns:
             Normalized distance between 0 and 1.
-
-        # TODO: [PLACEHOLDER] Implement normalized distance
-        # - Divide by max(len(original), len(obfuscated))
         """
-        pass
+        if not original and not obfuscated:
+            return 0.0
+        
+        distance = self.compute_levenshtein_distance(original, obfuscated)
+        
+        if self.normalization == "max_length":
+            max_len = max(len(original), len(obfuscated))
+            if max_len == 0:
+                return 0.0
+            return distance / max_len
+        elif self.normalization == "mean_length":
+            mean_len = (len(original) + len(obfuscated)) / 2
+            if mean_len == 0:
+                return 0.0
+            return distance / mean_len
+        else:
+            return float(distance)
 
     def get_privacy_score(
         self,
@@ -89,12 +99,8 @@ class PrivacyEvaluator:
 
         Returns:
             Privacy score between 0 and 1.
-
-        # TODO: [PLACEHOLDER] Implement privacy score
-        # - Use normalized Levenshtein distance
-        # - Higher distance = higher privacy
         """
-        pass
+        return self.compute_normalized_distance(original, obfuscated)
 
     def compute_privacy_batch(
         self,
@@ -110,10 +116,11 @@ class PrivacyEvaluator:
 
         Returns:
             List of privacy scores.
-
-        # TODO: [PLACEHOLDER] Implement batch privacy computation
         """
-        pass
+        return [
+            self.get_privacy_score(orig, obf)
+            for orig, obf in zip(original_list, obfuscated_list)
+        ]
 
     def compute_jaccard_distance(
         self,
@@ -129,12 +136,21 @@ class PrivacyEvaluator:
 
         Returns:
             Jaccard distance between 0 and 1.
-
-        # TODO: [PLACEHOLDER] Implement Jaccard distance
-        # - Tokenize both strings
-        # - Compute 1 - (intersection / union)
         """
-        pass
+        original_tokens = set(original.split())
+        obfuscated_tokens = set(obfuscated.split())
+        
+        if not original_tokens and not obfuscated_tokens:
+            return 0.0
+        
+        intersection = len(original_tokens & obfuscated_tokens)
+        union = len(original_tokens | obfuscated_tokens)
+        
+        if union == 0:
+            return 0.0
+        
+        jaccard_similarity = intersection / union
+        return 1.0 - jaccard_similarity
 
     def compute_cosine_distance(
         self,
@@ -150,10 +166,27 @@ class PrivacyEvaluator:
 
         Returns:
             Cosine distance between 0 and 1.
-
-        # TODO: [PLACEHOLDER] Implement cosine distance
         """
-        pass
+        original_tokens = original.split()
+        obfuscated_tokens = obfuscated.split()
+        
+        all_tokens = list(set(original_tokens + obfuscated_tokens))
+        
+        if not all_tokens:
+            return 0.0
+        
+        vec1 = np.array([original_tokens.count(t) for t in all_tokens], dtype=float)
+        vec2 = np.array([obfuscated_tokens.count(t) for t in all_tokens], dtype=float)
+        
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 1.0
+        
+        cosine_similarity = dot_product / (norm1 * norm2)
+        return 1.0 - cosine_similarity
 
     def aggregate_scores(
         self,
@@ -167,11 +200,17 @@ class PrivacyEvaluator:
 
         Returns:
             Aggregated statistics (mean, std, min, max).
-
-        # TODO: [PLACEHOLDER] Implement score aggregation
         """
-        pass
+        if not scores:
+            return {}
+        
+        return {
+            'mean': float(np.mean(scores)),
+            'std': float(np.std(scores)),
+            'min': float(np.min(scores)),
+            'max': float(np.max(scores))
+        }
 
     def __repr__(self) -> str:
         """Return string representation of the evaluator."""
-        pass
+        return f"PrivacyEvaluator(normalization='{self.normalization}')"
