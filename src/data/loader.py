@@ -6,6 +6,7 @@ examples from the openai/openai_humaneval test split.
 """
 
 from typing import List, Dict, Any, Optional
+from datasets import load_dataset
 
 
 class HumanEvalDataLoader:
@@ -32,19 +33,17 @@ class HumanEvalDataLoader:
             split: The dataset split to use.
             num_examples: Number of examples to load from the dataset.
         """
-        # TODO: [PLACEHOLDER] Initialize dataset connection
-        pass
+        self.dataset_name = dataset_name
+        self.split = split
+        self.num_examples = num_examples
+        self._dataset = None
 
     def load_dataset(self) -> None:
         """
         Load the dataset from HuggingFace.
-
-        # TODO: [PLACEHOLDER] Implement dataset loading logic
-        # - Use datasets library to load openai/openai_humaneval
-        # - Select the test split
-        # - Limit to first num_examples
         """
-        pass
+        dataset = load_dataset(self.dataset_name, split=self.split)
+        self._dataset = dataset.select(range(min(self.num_examples, len(dataset))))
 
     def get_prompts(self) -> List[str]:
         """
@@ -52,11 +51,10 @@ class HumanEvalDataLoader:
 
         Returns:
             List of code prompt strings.
-
-        # TODO: [PLACEHOLDER] Implement prompt extraction
-        # - Extract 'prompt' field from each example
         """
-        pass
+        if self._dataset is None:
+            self.load_dataset()
+        return [example['prompt'] for example in self._dataset]
 
     def get_canonical_solutions(self) -> List[str]:
         """
@@ -64,11 +62,10 @@ class HumanEvalDataLoader:
 
         Returns:
             List of canonical solution strings.
-
-        # TODO: [PLACEHOLDER] Implement solution extraction
-        # - Extract 'canonical_solution' field from each example
         """
-        pass
+        if self._dataset is None:
+            self.load_dataset()
+        return [example['canonical_solution'] for example in self._dataset]
 
     def get_example(self, index: int) -> Dict[str, Any]:
         """
@@ -79,23 +76,33 @@ class HumanEvalDataLoader:
 
         Returns:
             Dictionary containing prompt, canonical_solution, and metadata.
-
-        # TODO: [PLACEHOLDER] Implement single example retrieval
         """
-        pass
+        if self._dataset is None:
+            self.load_dataset()
+        if index < 0 or index >= len(self._dataset):
+            raise IndexError(f"Index {index} out of range for dataset with {len(self._dataset)} examples")
+        example = self._dataset[index]
+        return {
+            'prompt': example['prompt'],
+            'canonical_solution': example['canonical_solution'],
+            'task_id': example.get('task_id', ''),
+            'entry_point': example.get('entry_point', ''),
+            'test': example.get('test', '')
+        }
 
     def __len__(self) -> int:
         """
         Return the number of loaded examples.
-
-        # TODO: [PLACEHOLDER] Implement length calculation
         """
-        pass
+        if self._dataset is None:
+            self.load_dataset()
+        return len(self._dataset)
 
     def __iter__(self):
         """
         Iterate over all loaded examples.
-
-        # TODO: [PLACEHOLDER] Implement iterator
         """
-        pass
+        if self._dataset is None:
+            self.load_dataset()
+        for i in range(len(self._dataset)):
+            yield self.get_example(i)
