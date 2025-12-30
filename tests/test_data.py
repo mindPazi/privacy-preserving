@@ -3,10 +3,7 @@ Tests for the data loading module.
 """
 
 import unittest
-from typing import List, Dict
 
-import sys
-sys.path.insert(0, '/home/claude')
 
 from src.data import HumanEvalDataLoader
 

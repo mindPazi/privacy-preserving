@@ -9,7 +9,7 @@ This script orchestrates the complete experimental pipeline:
 5. Visualize results
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from pathlib import Path
 import argparse
 import json

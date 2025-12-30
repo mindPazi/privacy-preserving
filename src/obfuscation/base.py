@@ -6,7 +6,7 @@ obfuscation strategies must implement.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List
 import ast
 import keyword
 
