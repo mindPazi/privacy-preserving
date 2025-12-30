@@ -11,7 +11,9 @@ This script orchestrates the complete experimental pipeline:
 
 from typing import List, Dict, Any, Optional
 from pathlib import Path
-
+import argparse
+import json
+import numpy as np
 # Internal imports (stubs)
 from src.data import HumanEvalDataLoader
 from src.obfuscation import LowObfuscator, HighObfuscator
@@ -46,26 +48,27 @@ class ExperimentRunner:
             num_examples: Number of HumanEval examples to use.
             model_name: Name of the code completion model.
             output_dir: Directory for output files.
-
-        # TODO: [PLACEHOLDER] Initialize all components
-        # - DataLoader
-        # - Obfuscators
-        # - Model
-        # - Evaluators
-        # - Plotter
         """
-        pass
+        self.num_examples = num_examples
+        self.model_name = model_name
+        self.output_dir = Path(output_dir)
+        
+        self.data_loader = HumanEvalDataLoader(num_examples=num_examples)
+        self.low_obfuscator = LowObfuscator()
+        self.high_obfuscator = HighObfuscator()
+        self.model = CodeCompletionModel(model_name=model_name)
+        self.utility_evaluator = UtilityEvaluator()
+        self.privacy_evaluator = PrivacyEvaluator()
+        self.plotter = PrivacyUtilityPlotter()
 
     def setup(self) -> None:
         """
         Set up all experiment components.
 
-        # TODO: [PLACEHOLDER] Implement setup
-        # - Load dataset
-        # - Initialize model
-        # - Create output directory
         """
-        pass
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.data_loader.load_dataset()
+        self.model.load_model()
 
     def run_experiment(self) -> Dict[str, Any]:
         """
@@ -73,16 +76,52 @@ class ExperimentRunner:
 
         Returns:
             Dictionary containing all results.
-
-        # TODO: [PLACEHOLDER] Implement experiment pipeline
-        # - Generate original completions
-        # - Generate low-obfuscated completions
-        # - Generate high-obfuscated completions
-        # - Compute utility scores
-        # - Compute privacy scores
-        # - Return results
         """
-        pass
+        self.setup()
+        
+        prompts = self.data_loader.get_prompts()
+        canonical_solutions = self.data_loader.get_canonical_solutions()
+        
+        original_completions = self.generate_completions(prompts, "none")
+        
+        low_obfuscated_prompts = [self.low_obfuscator.obfuscate(p) for p in prompts]
+        low_completions = self.generate_completions(low_obfuscated_prompts, "low")
+        
+        high_obfuscated_prompts = [self.high_obfuscator.obfuscate(p) for p in prompts]
+        high_completions = self.generate_completions(high_obfuscated_prompts, "high")
+        
+        results = {
+            'none': {
+                'prompts': prompts,
+                'obfuscated_prompts': prompts,
+                'completions': original_completions,
+                'canonical_solutions': canonical_solutions
+            },
+            'low': {
+                'prompts': prompts,
+                'obfuscated_prompts': low_obfuscated_prompts,
+                'completions': low_completions,
+                'canonical_solutions': canonical_solutions
+            },
+            'high': {
+                'prompts': prompts,
+                'obfuscated_prompts': high_obfuscated_prompts,
+                'completions': high_completions,
+                'canonical_solutions': canonical_solutions
+            }
+        }
+        
+        for level in ['none', 'low', 'high']:
+            eval_results = self.evaluate_results(
+                results[level]['completions'],
+                results[level]['canonical_solutions'],
+                results[level]['prompts'],
+                results[level]['obfuscated_prompts']
+            )
+            results[level]['utility_scores'] = eval_results['utility_scores']
+            results[level]['privacy_scores'] = eval_results['privacy_scores']
+        
+        return results
 
     def generate_completions(
         self,
@@ -98,10 +137,8 @@ class ExperimentRunner:
 
         Returns:
             List of generated completions.
-
-        # TODO: [PLACEHOLDER] Implement completion generation
         """
-        pass
+        return self.model.generate_completions_batch(prompts)
 
     def evaluate_results(
         self,
@@ -121,10 +158,21 @@ class ExperimentRunner:
 
         Returns:
             Dictionary with utility and privacy scores.
-
-        # TODO: [PLACEHOLDER] Implement evaluation
         """
-        pass
+        
+        utility_scores = [
+            self.utility_evaluator.get_utility_score(comp, ref)
+            for comp, ref in zip(completions, canonical_solutions)
+        ]
+        
+        privacy_scores = self.privacy_evaluator.compute_privacy_batch(
+            original_prompts, obfuscated_prompts
+        )
+        
+        return {
+            'utility_scores': utility_scores,
+            'privacy_scores': privacy_scores
+        }
 
     def visualize_results(self, results: Dict[str, Any]) -> None:
         """
@@ -132,12 +180,25 @@ class ExperimentRunner:
 
         Args:
             results: Dictionary containing experiment results.
-
-        # TODO: [PLACEHOLDER] Implement visualization
-        # - Create scatter plot
-        # - Save figure
         """
-        pass
+        all_privacy = []
+        all_utility = []
+        all_labels = []
+        
+        for level in ['none', 'low', 'high']:
+            all_privacy.extend(results[level]['privacy_scores'])
+            all_utility.extend(results[level]['utility_scores'])
+            all_labels.extend([level] * len(results[level]['privacy_scores']))
+        
+        fig = self.plotter.create_scatter_plot(
+            all_privacy,
+            all_utility,
+            labels=all_labels,
+            title="Privacy-Utility Trade-off by Obfuscation Level"
+        )
+        
+        self.plotter.save_figure(fig, self.output_dir / "privacy_utility_scatter.png")
+
 
     def save_results(
         self,
@@ -150,11 +211,17 @@ class ExperimentRunner:
         Args:
             results: Dictionary containing experiment results.
             filepath: Output file path.
-
-        # TODO: [PLACEHOLDER] Implement result saving
-        # - Save as JSON or CSV
         """
-        pass
+        
+        save_data = {}
+        for level in ['none', 'low', 'high']:
+            save_data[level] = {
+                'utility_scores': results[level]['utility_scores'],
+                'privacy_scores': results[level]['privacy_scores']
+            }
+        
+        with open(filepath, 'w') as f:
+            json.dump(save_data, f, indent=2)
 
     def generate_report(self, results: Dict[str, Any]) -> str:
         """
@@ -165,10 +232,28 @@ class ExperimentRunner:
 
         Returns:
             Formatted report string.
-
-        # TODO: [PLACEHOLDER] Implement report generation
         """
-        pass
+        report = []
+        report.append("=" * 60)
+        report.append("Privacy-Utility Trade-off Experiment Report")
+        report.append("=" * 60)
+        report.append("")
+        
+        for level in ['none', 'low', 'high']:
+            utility = results[level]['utility_scores']
+            privacy = results[level]['privacy_scores']
+            
+            report.append(f"Obfuscation Level: {level.upper()}")
+            report.append("-" * 40)
+            report.append(f"  Utility Score (ROUGE-L):")
+            report.append(f"    Mean: {np.mean(utility):.4f}")
+            report.append(f"    Std:  {np.std(utility):.4f}")
+            report.append(f"  Privacy Score (Normalized Levenshtein):")
+            report.append(f"    Mean: {np.mean(privacy):.4f}")
+            report.append(f"    Std:  {np.std(privacy):.4f}")
+            report.append("")
+        
+        return "\n".join(report)
 
 
 def parse_arguments():
@@ -177,27 +262,52 @@ def parse_arguments():
 
     Returns:
         Parsed arguments namespace.
-
-    # TODO: [PLACEHOLDER] Implement argument parsing
-    # - num_examples
-    # - model_name
-    # - output_dir
-    # - device
     """
-    pass
+    parser = argparse.ArgumentParser(
+    description="Privacy-Preserving Code Completion Experiment"
+    )
+    parser.add_argument(
+        "--num_examples", type=int, default=20,
+        help="Number of HumanEval examples to use"
+    )
+    parser.add_argument(
+        "--model_name", type=str, default="Salesforce/codet5-small",
+        help="HuggingFace model identifier"
+    )
+    parser.add_argument(
+        "--output_dir", type=str, default="outputs",
+        help="Directory for output files"
+    )
+    parser.add_argument(
+        "--device", type=str, default="cpu",
+        help="Device for model inference (cpu/cuda)"
+    )
+    
+    return parser.parse_args()
 
 
 def main() -> None:
     """
     Main entry point.
-
-    # TODO: [PLACEHOLDER] Implement main function
-    # - Parse arguments
-    # - Create ExperimentRunner
-    # - Run experiment
-    # - Save and visualize results
     """
-    pass
+    args = parse_arguments()
+    
+    runner = ExperimentRunner(
+        num_examples=args.num_examples,
+        model_name=args.model_name,
+        output_dir=args.output_dir
+    )
+    
+    if args.device:
+        runner.model.device = args.device
+    
+    results = runner.run_experiment()
+    
+    runner.visualize_results(results)
+    runner.save_results(results, Path(args.output_dir) / "results.json")
+    
+    report = runner.generate_report(results)
+    print(report)
 
 
 if __name__ == "__main__":
