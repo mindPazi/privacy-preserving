@@ -6,6 +6,8 @@ specifically designed to work with models like Salesforce/codet5-small.
 """
 
 from typing import List, Dict, Any, Optional
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+import torch
 
 
 class CodeCompletionModel:
@@ -34,23 +36,28 @@ class CodeCompletionModel:
             model_name: The HuggingFace model identifier.
             device: The device to run inference on.
             max_length: Maximum length of generated completions.
-
-        # TODO: [PLACEHOLDER] Initialize model and tokenizer
-        # - Load model from HuggingFace transformers
-        # - Load tokenizer
-        # - Move model to specified device
         """
-        pass
+        self.model_name = model_name
+        self.device = device
+        self.max_length = max_length
+        self.model = None
+        self.tokenizer = None
+        self._generation_params = {
+            'max_length': max_length,
+            'num_beams': 1,
+            'temperature': 1.0,
+            'top_p': 1.0,
+            'do_sample': False
+        }
 
     def load_model(self) -> None:
         """
         Load the model and tokenizer from HuggingFace.
-
-        # TODO: [PLACEHOLDER] Implement model loading
-        # - Use AutoModelForSeq2SeqLM or appropriate model class
-        # - Use AutoTokenizer
         """
-        pass
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
+        self.model.to(self.device)
+        self.model.eval()
 
     def generate_completion(self, prompt: str) -> str:
         """
@@ -61,13 +68,25 @@ class CodeCompletionModel:
 
         Returns:
             The generated code completion.
-
-        # TODO: [PLACEHOLDER] Implement single completion generation
-        # - Tokenize input
-        # - Generate with model
-        # - Decode output
         """
-        pass
+        if self.model is None:
+            self.load_model()
+        
+        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_length=self._generation_params['max_length'],
+                num_beams=self._generation_params['num_beams'],
+                do_sample=self._generation_params['do_sample'],
+                temperature=self._generation_params['temperature'] if self._generation_params['do_sample'] else 1.0,
+                top_p=self._generation_params['top_p'] if self._generation_params['do_sample'] else 1.0
+            )
+        
+        completion = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return completion
 
     def generate_completions_batch(
         self,
@@ -83,10 +102,29 @@ class CodeCompletionModel:
 
         Returns:
             List of generated completions.
-
-        # TODO: [PLACEHOLDER] Implement batch completion generation
         """
-        pass
+        if self.model is None:
+            self.load_model()
+        
+        completions = []
+        
+        for i in range(0, len(prompts), batch_size):
+            batch = prompts[i:i + batch_size]
+            inputs = self.tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=512)
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_length=self._generation_params['max_length'],
+                    num_beams=self._generation_params['num_beams'],
+                    do_sample=self._generation_params['do_sample']
+                )
+            
+            batch_completions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            completions.extend(batch_completions)
+        
+        return completions
 
     def set_generation_params(
         self,
@@ -105,10 +143,13 @@ class CodeCompletionModel:
             temperature: Sampling temperature.
             top_p: Nucleus sampling probability.
             do_sample: Whether to use sampling.
-
-        # TODO: [PLACEHOLDER] Store generation parameters
         """
-        pass
+        if max_length is not None:
+            self._generation_params['max_length'] = max_length
+        self._generation_params['num_beams'] = num_beams
+        self._generation_params['temperature'] = temperature
+        self._generation_params['top_p'] = top_p
+        self._generation_params['do_sample'] = do_sample
 
     def get_model_info(self) -> Dict[str, Any]:
         """
@@ -116,10 +157,14 @@ class CodeCompletionModel:
 
         Returns:
             Dictionary containing model metadata.
-
-        # TODO: [PLACEHOLDER] Return model information
         """
-        pass
+        return {
+            'model_name': self.model_name,
+            'device': self.device,
+            'max_length': self.max_length,
+            'is_loaded': self.model is not None,
+            'generation_params': self._generation_params.copy()
+        }
 
     def to_device(self, device: str) -> None:
         """
@@ -127,11 +172,11 @@ class CodeCompletionModel:
 
         Args:
             device: Target device (cpu/cuda).
-
-        # TODO: [PLACEHOLDER] Implement device transfer
         """
-        pass
+        self.device = device
+        if self.model is not None:
+            self.model.to(device)
 
     def __repr__(self) -> str:
         """Return string representation of the model."""
-        pass
+        return f"CodeCompletionModel(model_name='{self.model_name}', device='{self.device}')"
