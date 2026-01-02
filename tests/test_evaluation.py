@@ -5,6 +5,11 @@ Tests for the evaluation module.
 import unittest
 from typing import Dict, List
 
+import sys
+sys.path.insert(0, '/home/claude')
+
+from src.evaluation import UtilityEvaluator, PrivacyEvaluator
+
 
 class TestUtilityEvaluator(unittest.TestCase):
     """
@@ -14,64 +19,68 @@ class TestUtilityEvaluator(unittest.TestCase):
     def setUp(self) -> None:
         """
         Set up test fixtures.
-
-        # TODO: [PLACEHOLDER] Initialize utility evaluator
         """
-        pass
+        self.evaluator = UtilityEvaluator()
 
     def test_compute_rouge_score(self) -> None:
         """
         Test ROUGE score computation.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Compute ROUGE for known pair
-        # - Verify scores are in valid range [0, 1]
         """
-        pass
+        generated = "The quick brown fox"
+        reference = "The quick brown fox jumps"
+        scores = self.evaluator.compute_rouge_score(generated, reference)
+        self.assertIn('rouge1', scores)
+        self.assertIn('rouge2', scores)
+        self.assertIn('rougeL', scores)
+        for score in scores.values():
+            self.assertGreaterEqual(score, 0.0)
+            self.assertLessEqual(score, 1.0)
 
     def test_compute_rouge_identical(self) -> None:
         """
         Test ROUGE score for identical strings.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Identical strings should have perfect score
         """
-        pass
+        text = "The quick brown fox"
+        scores = self.evaluator.compute_rouge_score(text, text)
+        self.assertAlmostEqual(scores['rougeL'], 1.0, places=5)
 
     def test_compute_rouge_empty(self) -> None:
         """
         Test ROUGE score for empty strings.
-
-        # TODO: [PLACEHOLDER] Implement test
         """
-        pass
+        scores = self.evaluator.compute_rouge_score("", "")
+        for score in scores.values():
+            self.assertEqual(score, 0.0)
 
     def test_compute_rouge_batch(self) -> None:
         """
         Test batch ROUGE computation.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Verify batch processing works
-        # - Check output length matches input
         """
-        pass
+        generated = ["hello world", "foo bar"]
+        reference = ["hello world", "baz qux"]
+        results = self.evaluator.compute_rouge_batch(generated, reference)
+        self.assertEqual(len(results), 2)
 
     def test_compute_bleu_score(self) -> None:
         """
         Test BLEU score computation.
-
-        # TODO: [PLACEHOLDER] Implement test
         """
-        pass
+        generated = "The quick brown fox"
+        reference = "The quick brown fox jumps"
+        score = self.evaluator.compute_bleu_score(generated, reference)
+        self.assertGreaterEqual(score, 0.0)
+        self.assertLessEqual(score, 1.0)
 
     def test_aggregate_scores(self) -> None:
         """
         Test score aggregation.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Verify mean, std, min, max are computed
         """
-        pass
+        scores = [{'rouge1': 0.5, 'rougeL': 0.6}, {'rouge1': 0.7, 'rougeL': 0.8}]
+        aggregated = self.evaluator.aggregate_scores(scores)
+        self.assertIn('rouge1_mean', aggregated)
+        self.assertIn('rouge1_std', aggregated)
+        self.assertIn('rouge1_min', aggregated)
+        self.assertIn('rouge1_max', aggregated)
 
 
 class TestPrivacyEvaluator(unittest.TestCase):
@@ -82,62 +91,57 @@ class TestPrivacyEvaluator(unittest.TestCase):
     def setUp(self) -> None:
         """
         Set up test fixtures.
-
-        # TODO: [PLACEHOLDER] Initialize privacy evaluator
         """
-        pass
+        self.evaluator = PrivacyEvaluator()
 
     def test_compute_levenshtein_distance(self) -> None:
         """
         Test Levenshtein distance computation.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Test with known edit distances
         """
-        pass
+        distance = self.evaluator.compute_levenshtein_distance("kitten", "sitting")
+        self.assertEqual(distance, 3)
 
     def test_compute_levenshtein_identical(self) -> None:
         """
         Test Levenshtein distance for identical strings.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Identical strings should have distance 0
         """
-        pass
+        distance = self.evaluator.compute_levenshtein_distance("hello", "hello")
+        self.assertEqual(distance, 0)
 
     def test_compute_normalized_distance(self) -> None:
         """
         Test normalized distance computation.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Verify normalized values are in [0, 1]
         """
-        pass
+        distance = self.evaluator.compute_normalized_distance("abc", "def")
+        self.assertGreaterEqual(distance, 0.0)
+        self.assertLessEqual(distance, 1.0)
 
     def test_get_privacy_score(self) -> None:
         """
         Test privacy score computation.
-
-        # TODO: [PLACEHOLDER] Implement test
-        # - Higher obfuscation should yield higher privacy
         """
-        pass
+        original = "x = 5"
+        obfuscated = "PLACEHOLDER_0 = 5"
+        score = self.evaluator.get_privacy_score(original, obfuscated)
+        self.assertGreaterEqual(score, 0.0)
+        self.assertLessEqual(score, 1.0)
 
     def test_compute_privacy_batch(self) -> None:
         """
         Test batch privacy computation.
-
-        # TODO: [PLACEHOLDER] Implement test
         """
-        pass
+        originals = ["hello", "world"]
+        obfuscated = ["hallo", "werld"]
+        scores = self.evaluator.compute_privacy_batch(originals, obfuscated)
+        self.assertEqual(len(scores), 2)
 
     def test_compute_jaccard_distance(self) -> None:
         """
         Test Jaccard distance computation.
-
-        # TODO: [PLACEHOLDER] Implement test
         """
-        pass
+        distance = self.evaluator.compute_jaccard_distance("hello world", "hello there")
+        self.assertGreaterEqual(distance, 0.0)
+        self.assertLessEqual(distance, 1.0)
 
 
 if __name__ == "__main__":
