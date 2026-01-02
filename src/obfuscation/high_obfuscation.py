@@ -68,21 +68,21 @@ class HighObfuscator(BaseObfuscator):
         """
         if not code or not code.strip():
             return code
-        
+
         self._mapping = {}
         result = code
-        
+
         if self.strip_comments:
             result = self._strip_comments(result)
-        
+
+        result = self._replace_identifiers(result)
+
         if self.strip_docstrings:
             result = self._strip_docstrings(result)
-        
-        result = self._replace_identifiers(result)
-        
+
         if self.normalize_whitespace:
             result = self._normalize_whitespace(result)
-        
+
         return result
 
     def get_mapping(self) -> Dict[str, str]:
@@ -255,17 +255,7 @@ class HighObfuscator(BaseObfuscator):
         Returns:
             Set of reserved keyword strings.
         """
-        reserved = set(keyword.kwlist)
-        builtins = {'print', 'len', 'range', 'str', 'int', 'float', 'list', 'dict',
-                   'set', 'tuple', 'bool', 'type', 'isinstance', 'hasattr', 'getattr',
-                   'setattr', 'open', 'input', 'abs', 'all', 'any', 'bin', 'chr',
-                   'enumerate', 'filter', 'format', 'hex', 'id', 'iter', 'map', 'max',
-                   'min', 'next', 'oct', 'ord', 'pow', 'repr', 'reversed', 'round',
-                   'slice', 'sorted', 'sum', 'super', 'zip', 'True', 'False', 'None',
-                   'Exception', 'ValueError', 'TypeError', 'KeyError', 'IndexError',
-                   'AttributeError', 'ImportError', 'RuntimeError', 'StopIteration',
-                   'object', 'classmethod', 'staticmethod', 'property'}
-        return reserved | builtins
+        return set(keyword.kwlist)
 
     def _generate_placeholder(self, index: int) -> str:
         """
