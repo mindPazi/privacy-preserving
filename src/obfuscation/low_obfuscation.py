@@ -6,7 +6,7 @@ minimal transformations such as renaming variables while preserving
 overall code structure and readability.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 import ast
 import keyword
 import re

@@ -6,7 +6,7 @@ aggressive transformations including replacing names with placeholders,
 stripping comments, and removing docstrings.
 """
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, Set
 import ast
 import keyword
 import re

@@ -3,10 +3,7 @@ Tests for the evaluation module.
 """
 
 import unittest
-from typing import Dict, List
 
-import sys
-sys.path.insert(0, '/home/claude')
 
 from src.evaluation import UtilityEvaluator, PrivacyEvaluator
 

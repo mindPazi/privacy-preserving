@@ -5,7 +5,7 @@ This module provides metrics for evaluating the utility of
 code completions by comparing them to canonical solutions.
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from rouge_score import rouge_scorer
 import numpy as np
 

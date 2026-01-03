@@ -3,10 +3,7 @@ Tests for the obfuscation module.
 """
 
 import unittest
-from typing import Dict
 
-import sys
-sys.path.insert(0, '/home/claude')
 
 from src.obfuscation import LowObfuscator, HighObfuscator
 

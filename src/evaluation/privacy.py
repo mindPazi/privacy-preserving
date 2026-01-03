@@ -5,7 +5,7 @@ This module provides metrics for evaluating the privacy preservation
 of obfuscated prompts by measuring their distance from original prompts.
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any
 import Levenshtein
 import numpy as np
 
