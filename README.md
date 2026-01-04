@@ -16,9 +16,11 @@ This project investigates how code obfuscation techniques can preserve privacy i
 
 ```plaintext
 privacy-preserving/
-├── main.py                     # Main entry point and experiment runner
+├── privacy_utility_experiment.ipynb  # Jupyter notebook with full experiment
 ├── README.md                   # This file
 ├── requirements.txt            # Python dependencies
+├── results.json                # Experimental results
+├── privacy_utility_scatter.png # Results visualization
 ├── docs/
 │   └── structure.tex           # LaTeX documentation of project structure
 ├── src/
@@ -60,9 +62,9 @@ privacy-preserving/
 
 **LowObfuscator**: Applies minimal obfuscation:
 
-- Renames local variables to generic names (var1, var2, etc.)
-- Preserves function names and structure
-- Keeps comments and docstrings intact
+- Renames local variables and parameters to generic names (var1, var2, etc.)
+- Preserves function names and type annotations
+- Removes docstrings to avoid inconsistencies
 
 **HighObfuscator**: Applies aggressive obfuscation:
 
@@ -110,24 +112,39 @@ pip install -r requirements.txt
 
 ## Usage
 
+Run the full experiment using the Jupyter notebook:
+
+```bash
+jupyter notebook privacy_utility_experiment.ipynb
+```
+
+Or use the modules programmatically:
+
 ```python
-# TODO: [PLACEHOLDER] Example usage code will be added here
-# after implementation is complete
+from src.data import HumanEvalDataLoader
+from src.obfuscation import LowObfuscator, HighObfuscator
+from src.models import CodeCompletionModel
+from src.evaluation import UtilityEvaluator, PrivacyEvaluator
 
-from main import ExperimentRunner
+# Load data
+data_loader = HumanEvalDataLoader(num_examples=20)
+data_loader.load_dataset()
+prompts = data_loader.get_prompts()
 
-# Initialize experiment
-runner = ExperimentRunner(
-    num_examples=20,
-    model_name="Salesforce/codet5-small",
-    output_dir="outputs"
-)
+# Apply obfuscation
+low_obf = LowObfuscator()
+high_obf = HighObfuscator()
+low_prompts = [low_obf.obfuscate(p) for p in prompts]
+high_prompts = [high_obf.obfuscate(p) for p in prompts]
 
-# Run experiment
-results = runner.run_experiment()
+# Generate completions
+model = CodeCompletionModel(model_name="Salesforce/codet5-small")
+model.load_model()
+completions = model.generate_completions_batch(prompts)
 
-# Visualize results
-runner.visualize_results(results)
+# Evaluate
+utility_eval = UtilityEvaluator()
+privacy_eval = PrivacyEvaluator()
 ```
 
 ## Experiment Design
@@ -144,23 +161,6 @@ The experiment follows this pipeline:
    - **Utility Score**: ROUGE-L F1 score comparing completion to canonical solution
    - **Privacy Score**: Normalized Levenshtein distance between obfuscated and original prompt
 5. **Visualization**: Scatter plot showing privacy vs. utility trade-off
-
-## Implementation Status
-
-This repository currently contains the project structure with class and method stubs. All methods are marked with `# TODO: [PLACEHOLDER]` comments indicating where implementation should be added.
-
-### Pending Implementation
-
-```markdown
-- [ ] Data loader implementation
-- [ ] Low obfuscation implementation
-- [ ] High obfuscation implementation
-- [ ] Model wrapper implementation
-- [ ] Utility evaluation implementation
-- [ ] Privacy evaluation implementation
-- [ ] Visualization implementation
-- [ ] Main experiment runner implementation
-```
 
 ## Dependencies
 
